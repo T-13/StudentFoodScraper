@@ -11,7 +11,7 @@ Scrapes https://www.studentska-prehrana.si/ to retrieve data of student restaura
 ```
 usage: studentfood.py [-h] [-m] [-a] [-n NAME] [-c CITY] [-v] [-w]
                       [--wheelchair] [-d] [-l] [-p PRICE]
-                      [--price-less PRICE_LESS] [--price-more PRICE_MORE]
+                      [--price-le PRICE_LE] [--price-ge PRICE_GE] [-o OUT]
 
 Search restaurants providing student food on https://www.studentska-
 prehrana.si/
@@ -29,8 +29,7 @@ optional arguments:
   -l, --lunch           require lunch
   -p PRICE, --price PRICE
                         require price to be same as given value
-  --price-less PRICE_LESS
-                        require price to be lower than given value
-  --price-more PRICE_MORE
-                        require price to be higher than given value
+  --price-le PRICE_LE   require price to be lower than given value
+  --price-ge PRICE_GE   require price to be higher than given value
+  -o OUT, --out OUT     write to given file (json)
 ```
