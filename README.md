@@ -4,6 +4,8 @@ Python CLI tool for searching Slovenian restaurants offering student meals. Supp
 
 Scrapes https://www.studentska-prehrana.si/ to retrieve data of all restaurants serving student meals in Slovenia and displays them in text.
 
+![Example](https://raw.githubusercontent.com/T-13/StudentFoodScraper/master/example.png)
+
 ## Usage
 
 ```

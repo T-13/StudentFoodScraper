@@ -127,8 +127,8 @@ def main():
     parser.add_argument("-d", "--delivery", action="store_true", help="require delivery service")
     parser.add_argument("-l", "--lunch", action="store_true", help="require lunch")
     parser.add_argument("-p", "--price", type=float, default=-1.0, help="require price to be same as given value")
-    parser.add_argument("--price-less", type=float, default=float("inf"), help="require price to be lower than given value")
-    parser.add_argument("--price-more", type=float, default=0.0, help="require price to be higher than given value")
+    parser.add_argument("--price-le", type=float, default=float("inf"), help="require price to be lower than given value")
+    parser.add_argument("--price-ge", type=float, default=0.0, help="require price to be higher than given value")
 
     args = parser.parse_args();
     args.name = args.name.lower().strip()
@@ -158,8 +158,8 @@ def main():
             if args.delivery and not restaurant.delivery:       continue
             if args.lunch and not restaurant.lunch:             continue
             if args.price >= 0.0 and args.price != restaurant.price_student: continue
-            if restaurant.price_student > args.price_less:                   continue
-            if restaurant.price_student < args.price_more:                   continue
+            if restaurant.price_student > args.price_le:                     continue
+            if restaurant.price_student < args.price_ge:                     continue
 
 
             found.append(restaurant)
