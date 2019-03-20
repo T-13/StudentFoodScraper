@@ -126,7 +126,7 @@ def main():
     parser.add_argument("--wheelchair", action="store_true", help="require wheelchair entrance")
     parser.add_argument("-d", "--delivery", action="store_true", help="require delivery service")
     parser.add_argument("-l", "--lunch", action="store_true", help="require lunch")
-    parser.add_argument("-p", "--price", type=float, default=-1.0, help="require price to same as given value")
+    parser.add_argument("-p", "--price", type=float, default=-1.0, help="require price to be same as given value")
     parser.add_argument("--price-less", type=float, default=float("inf"), help="require price to be lower than given value")
     parser.add_argument("--price-more", type=float, default=0.0, help="require price to be higher than given value")
 
