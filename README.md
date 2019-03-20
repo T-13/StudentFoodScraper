@@ -1,8 +1,8 @@
 # StudentFoodScraper
 
-Python CLI tool for searching Slovenian restaurants offering student meals. Supports various filtering to narrow and speed-up the search.
+Python CLI tool for searching restaurants serving student meals in Slovenia. Supports various filtering to narrow and speed-up the search.
 
-Scrapes https://www.studentska-prehrana.si/ to retrieve data of all restaurants serving student meals in Slovenia and displays them in text.
+Scrapes https://www.studentska-prehrana.si/ to retrieve data of student restaurants and displays them in nicely formatted text. Scraping code kindly donated by [Leksi](https://leksi.si/) project for wider use.
 
 ![Example](https://raw.githubusercontent.com/T-13/StudentFoodScraper/master/example.png)
 
