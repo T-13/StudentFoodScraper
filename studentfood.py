@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import sys
+import argparse
 
 import requests
 from bs4 import BeautifulSoup
 import progressbar as pb
+from termcolor import colored
 
 
 BASE_URL = "https://www.studentska-prehrana.si/"
@@ -16,26 +18,22 @@ class Restaurant():
     longitude = 0.0
     latitude = 0.0
     address = ""
-    price = 0.0
-    payment = 0.0
+    price_student = 0.0
+    price_full = 0.0
     city = ""
     meals = []
 
-    # Has vegetarian meals
     vegi = False
-    # Is open on weekends
     weekends = False
-    # Has entry for wheelchair
     for_disabled = False
-    # Has delivery
     delivery = False
-    delivery_price = 0.0
-    delivery_payment = 0.0
+    lunch = False
 
     @classmethod
-    def from_html(self, element):
+    def from_html(cls, element):
         # Retrieve restaurant data from tags
-        restaurant = Restaurant()
+        restaurant = cls()
+
         try:
             restaurant.latitude = float(element["data-lon"].replace(",", "."))
             restaurant.longitude = float(element["data-lat"].replace(",", "."))
@@ -43,8 +41,11 @@ class Restaurant():
             pass
 
         restaurant.address = element["data-naslov"]
-        restaurant.price = float(element["data-cena"].replace(",", "."))
-        restaurant.payment = float(element["data-doplacilo"].replace(",", "."))
+        try:
+            restaurant.price_full = float(element["data-cena"].replace(",", "."))
+            restaurant.price_student = float(element["data-doplacilo"].replace(",", "."))
+        except ValueError:
+            pass
         restaurant.name = element["data-lokal"]
         restaurant.city = element["data-city"]
 
@@ -57,22 +58,30 @@ class Restaurant():
                 restaurant.for_disabled = True
             elif extra["title"] == "Odprt ob vikendih":
                 restaurant.weekends = True
+            elif extra["title"] == "Dostava":
+                restaurant.delivery = True
+            elif extra["title"] == "Kosilo":
+                restaurant.lunch = True
 
         return restaurant
 
     def __repr__(self):
-        text = "{} ({})\n".format(self.name, self.city)
+        text = "{} {}".format(colored(self.name, attrs=["bold", "underline"]),
+                              colored("({})".format(self.city), attrs=["dark"]))
+
+        if self.vegi:         text += colored(" [VEGGIE]", "yellow")
+        if self.weekends:     text += colored(" [WEEKEND]", "yellow")
+        if self.for_disabled: text += colored(" [WHEELCHAIR]", "yellow")
+        if self.delivery:     text += colored(" [DELIVERY]", "yellow")
+        if self.lunch:        text += colored(" [LUNCH]", "yellow")
+
+        text += " => {} {}".format(colored("{}€".format(self.price_student), attrs=["bold"]),
+                                   colored("({}€)".format(self.price_full), attrs=["dark"]))
+
         for meal in self.meals:
-            text += "- {}\n".format(meal)
+            text += "\n- {}".format(meal)
+
         return text
-
-    def to_json(self):
-        return model_to_json(Restaurant, self)
-
-    def add_delivery(self, delivery):
-        self.delivery = True
-        self.delivery_price = float(delivery["data-cena"].replace(",", "."))
-        self.delivery_payment = float(delivery["data-doplacilo"].replace(",", "."))
 
 
 class Meal():
@@ -80,11 +89,12 @@ class Meal():
     extras = ""
 
     def __repr__(self):
-        return "{} ({})".format(self.main_meal, self.extras)
+        return "{} {}".format(self.main_meal,
+                              colored("({})".format(self.extras), attrs=["dark"]))
 
     @classmethod
-    def from_html(self, element):
-        meal = Meal()
+    def from_html(cls, element):
+        meal = cls()
         temp = element.find_all("p")[0].find_all("h5")[0]
 
         # Get main meal (split by spaces to get rid of leading number)
@@ -102,11 +112,29 @@ class Meal():
 
         return meal
 
-    def to_json(self):
-        return model_to_json(Meal, self, serialize_related=False)
-
 
 def main():
+    # Parse arguments
+    parser = argparse.ArgumentParser(
+        description="Search restaurants providing student food on {}".format(BASE_URL))
+    parser.add_argument("-m", "--meals", action="store_true", help="show meals")
+    parser.add_argument("-a", "--address", action="store_true", help="show address")
+    parser.add_argument("-n", "--name", type=str, default="", help="name to search by")
+    parser.add_argument("-c", "--city", type=str, default="", help="city to search in")
+    parser.add_argument("-v", "--vegetarian", action="store_true", help="require vegetarian offer")
+    parser.add_argument("-w", "--weekends", action="store_true", help="require weekend offer")
+    parser.add_argument("--wheelchair", action="store_true", help="require wheelchair entrance")
+    parser.add_argument("-d", "--delivery", action="store_true", help="require delivery service")
+    parser.add_argument("-l", "--lunch", action="store_true", help="require lunch")
+    parser.add_argument("-p", "--price", type=float, default=-1.0, help="require price to same as given value")
+    parser.add_argument("--price-less", type=float, default=float("inf"), help="require price to be lower than given value")
+    parser.add_argument("--price-more", type=float, default=0.0, help="require price to be higher than given value")
+
+    args = parser.parse_args();
+    args.name = args.name.lower().strip()
+    args.city = args.city.lower().strip()
+
+    # Search
     try:
         # Get html from resource, parse it and get all restaurant elements
         html = requests.get("{}/{}".format(BASE_URL, RESTAURANT_EXT))
@@ -117,11 +145,29 @@ def main():
 
         # Retrieve data
         print("Searching restaurants on {}...".format(BASE_URL))
-        for element in pb.progressbar(restaurants[:2]):
+        for element in pb.progressbar(restaurants):
             # Parse restaurant basic data
             restaurant = Restaurant.from_html(element)
 
+            # Conditions
+            if args.name and args.name not in restaurant.name.lower().strip(): continue
+            if args.city and args.city not in restaurant.city.lower().strip(): continue
+            if args.vegetarian and not restaurant.vegi:         continue
+            if args.weekends and not restaurant.weekends:       continue
+            if args.wheelchair and not restaurant.for_disabled: continue
+            if args.delivery and not restaurant.delivery:       continue
+            if args.lunch and not restaurant.lunch:             continue
+            if args.price >= 0.0 and args.price != restaurant.price_student: continue
+            if restaurant.price_student > args.price_less:                   continue
+            if restaurant.price_student < args.price_more:                   continue
+
+
+            found.append(restaurant)
+
             # Parse restaurant details - ignore if no details provided
+            if not args.meals:
+                continue
+
             source = element["data-detailslink"]
             if not source or len(source.strip()) <= 0:
                 continue
@@ -139,13 +185,20 @@ def main():
                 except Exception as e:
                     pass  # No menu/meal defined
 
-            found.append(restaurant)
+        # Pretty print
+        if not args.meals:
+            print()
 
-        print()
         for f in found:
-            print(f)
+            if args.meals:
+                print()
 
-        print("Found {} restaurants!".format(len(found)))
+            print(f)
+            if args.address:
+                print(colored("[{} ({}, {})]".format(f.address, f.longitude, f.latitude), attrs=["dark"]))
+
+
+        print("\nFound {} restaurants!".format(len(found)))
 
     except Exception as e:
         print("Failed to fetch restaurants! {}".format(e))
